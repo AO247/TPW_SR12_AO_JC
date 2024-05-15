@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Windows.Controls;
 using System.Windows.Shapes;
 
-namespace TestyJednostkowe {
+namespace Testy {
     [TestClass]
     public class Testy {
         [TestMethod]
@@ -27,6 +27,7 @@ namespace TestyJednostkowe {
             Process currentProcess2 = Process.GetCurrentProcess();
             int threadCount2 = currentProcess2.Threads.Count;
             Debug.WriteLine(threadCount2);
+            Assert.AreEqual(5, Logika.Logic.circleList.CountCircles());
             Assert.IsTrue(threadCount2 < 50);
         }
 

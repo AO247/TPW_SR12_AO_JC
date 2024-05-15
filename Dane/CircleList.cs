@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 
 namespace Dane {
-    public class CircleList {
+    public class CircleList : IEnumerable<Circle> {
         private readonly List<Circle> circles;
 
         public CircleList() {
@@ -24,6 +25,15 @@ namespace Dane {
             return circles[index];
         }
 
+        public IEnumerator<Circle> GetEnumerator()
+        {
+            return circles.GetEnumerator();
+        }
 
+        // Metoda wymagana przez interfejs IEnumerable
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
     }
 }

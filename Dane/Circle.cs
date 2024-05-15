@@ -9,8 +9,8 @@ namespace Dane
         public double Y { get; set; }
         public int Size { get; set; }
         public int Radius { get; set; }
-        public double DirectionX { get; set; }
-        public double DirectionY { get; set; }
+        public double dirX { get; set; }
+        public double dirY { get; set; }
 
         public double Speed { get; set; }
 
@@ -24,18 +24,18 @@ namespace Dane
             Speed = speed;
             Mass = mass;
 
-            DirectionX = 0;
-            DirectionY = 0;
+            this.dirX = 0;
+            this.dirY = 0;
 
 
-            while (DirectionX == 0 && DirectionY == 0) {
+            while (this.dirX == 0 && this.dirY == 0) {
                 Random random = new Random();
-                DirectionX = random.NextDouble();
-                DirectionY = random.NextDouble();
+                this.dirX = random.NextDouble();
+                this.dirY = random.NextDouble();
             }
 
-            DirectionX *= speed/mass; 
-            DirectionY *= speed/mass;
+            this.dirX *= speed/ mass; 
+            this.dirY *= speed/ mass;
         }
 
 

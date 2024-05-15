@@ -53,14 +53,16 @@ namespace Logika
                 Random random = new Random();
                 speed = random.Next(-1, 1);
             }
-
-            Circle circleObject = new Circle(x, y, size, radius, speed, 1);
+            if (radius < 10) {
+                radius = 10;
+            }
+            Circle circleObject = new Circle(x, y, size, radius, speed, radius / 10);
             Random randomc = new Random();
             Color color = Color.FromRgb((byte)randomc.Next(256), (byte)randomc.Next(256), (byte)randomc.Next(256));
             Ellipse circle = new Ellipse
             {
-                Width = radius,
-                Height = radius,
+                Width = radius * 2,
+                Height = radius * 2,
                 Fill = new SolidColorBrush(color)
             };
 
@@ -70,39 +72,111 @@ namespace Logika
             canvas.Children.Add(circle);
 
             circleList.AddCircle(circleObject);
-            Task task = new Task( () => 
+            Task task = new Task(() =>
             {
-                while (true) {
+                while (true)
+                {
                     var dispatcher = Application.Current.Dispatcher;
+                  
                     dispatcher.Invoke(() =>
                     {
 
                         double left = Canvas.GetLeft(circle);
                         double top = Canvas.GetTop(circle);
 
-                        if (left + circle.Width >= canvas.ActualWidth) {
-                            circleObject.DirectionX = -circleObject.DirectionX;
+                        
+                        if (left + circle.Width >= canvas.Width)
+                        {
+                            circleObject.dirX = -circleObject.dirX;
                         }
-                        else if (left <= 0) {
-                            circleObject.DirectionX = -circleObject.DirectionX;
-                        }
-
-                        if (top + circle.Height >= canvas.ActualHeight) {
-                            circleObject.DirectionY = -circleObject.DirectionY;
-                        }
-                        else if (top <= 0) {
-                            circleObject.DirectionY = -circleObject.DirectionY;
+                        else if (left <= 0)
+                        {
+                            circleObject.dirX = -circleObject.dirX;
                         }
 
-                        circleObject.X += circleObject.DirectionX;
-                        circleObject.Y += circleObject.DirectionY;
+                        if (top + circle.Height >= canvas.Height)
+                        {
+                            circleObject.dirY = -circleObject.dirY;
+                        }
+                        else if (top <= 0)
+                        {
+                            circleObject.dirY = -circleObject.dirY;
+                        }
+
+                        
+                        
+                        circleObject.X += circleObject.dirX;
+                        circleObject.Y += circleObject.dirY;
+
 
                         Canvas.SetLeft(circle, circleObject.X - circleObject.Radius);
                         Canvas.SetTop(circle, circleObject.Y - circleObject.Radius);
+
+
+                        foreach (var otherCircle in circleList)
+                        {
+                            if (otherCircle != circleObject)
+                            {
+                                double dx = circleObject.X - otherCircle.X;
+                                double dy = circleObject.Y - otherCircle.Y;
+                                double distance = Math.Sqrt(dx * dx + dy * dy);
+
+
+                                if (distance < (circleObject.Radius + otherCircle.Radius))
+                                {
+                                    
+                                    double normalX = dx / distance;
+                                    double normalY = dy / distance;
+
+                                    
+                                    double velocityX = circleObject.dirX - otherCircle.dirX;
+                                    double velocityY = circleObject.dirY - otherCircle.dirY;
+
+                                 
+                                    double velocityAlongNormal = velocityX * normalX + velocityY * normalY;
+
+                                  
+                                    if (velocityAlongNormal > 0)
+                                    {
+                                        break;
+                                    }
+
+                        
+                                    double e = 1; 
+                                    double j = -(1 + e) * velocityAlongNormal;
+                                    j /= (1 / circleObject.Mass + 1 / otherCircle.Mass);
+
+                                 
+                                    circleObject.dirX -= -j * normalX / circleObject.Mass;
+                                    circleObject.dirY -= -j * normalY / circleObject.Mass;
+                                    otherCircle.dirX += -j * normalX / otherCircle.Mass;
+                                    otherCircle.dirY += -j * normalY / otherCircle.Mass;
+
+                                    double maxSpeed = 0.5; 
+                                    double speed1 = Math.Sqrt(circleObject.dirX * circleObject.dirX + circleObject.dirY * circleObject.dirY);
+                                    double speed2 = Math.Sqrt(otherCircle.dirX * otherCircle.dirX + otherCircle.dirY * otherCircle.dirY);
+                                    if (speed1 > maxSpeed)
+                                    {
+                                        circleObject.dirX *= maxSpeed / speed1;
+                                        circleObject.dirY *= maxSpeed / speed1;
+                                    }
+                                    if (speed2 > maxSpeed)
+                                    {
+                                        otherCircle.dirX *= maxSpeed / speed2;
+                                        otherCircle.dirY *= maxSpeed / speed2;
+                                    }
+
+                                    break; 
+                                }
+                            }
+                        }
                     });
                     Thread.Sleep(1);
                 }
-            });
+            })
+            {
+
+            };
             task.Start();
 
         }
