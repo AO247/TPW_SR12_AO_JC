@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Dane;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
 using System.Windows.Controls;
 using System.Windows.Shapes;
@@ -52,5 +53,15 @@ namespace Testy {
             Assert.AreEqual(circle1.Speed, 10);
             Assert.AreEqual(circle1.Mass, 1);
         }
+        [TestMethod]
+        public void TestCircleSerialization()
+        {
+            Circle circle = new Circle(10, 20, 30, 15, 5.0, 1.5);
+            string json = circle.ToJson();
+            Assert.IsNotNull(json);
+            Assert.IsTrue(json.Contains("\"X\":10"));
+            Assert.IsTrue(json.Contains("\"Y\":20"));
+        }
+        
     }
 }
