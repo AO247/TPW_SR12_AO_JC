@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -12,8 +13,7 @@ namespace Logika
     public class Logic
     {
         public static CircleList circleList = new CircleList();
-        private static Logger logger = new Logger("diagnostic_log.txt");
-
+        private static Logger logger = new Logger("\\diagnostic_log.txt");
         public static void CreateCircles(Canvas canvas, int value, int radius)
         {
             if (radius == 0)
