@@ -24,6 +24,10 @@ namespace Dane {
         public Circle GetCircle(int index) {
             return circles[index];
         }
+        public int IndexOf(Circle circle)
+        {
+            return circles.IndexOf(circle);
+        }
 
         public IEnumerator<Circle> GetEnumerator()
         {

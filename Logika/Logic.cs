@@ -13,7 +13,10 @@ namespace Logika
     public class Logic
     {
         public static CircleList circleList = new CircleList();
-        private static Logger logger = new Logger("\\diagnostic_log.txt");
+        private static Logger logger = new Logger(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "diagnostic_log.txt"));
+        private static Timer timer;
+        private static object lockObject = new object();
+
         public static void CreateCircles(Canvas canvas, int value, int radius)
         {
             if (radius == 0)
@@ -73,14 +76,25 @@ namespace Logika
             canvas.Children.Add(circle);
 
             circleList.AddCircle(circleObject);
-            Task task = new Task(async () =>
-            {
-                while (true)
-                {
-                    var dispatcher = Application.Current.Dispatcher;
 
-                    dispatcher.Invoke(() =>
+            if (timer == null)
+            {
+                timer = new Timer(UpdateCircles, canvas, 0, 8); // Około 120 FPS
+            }
+        }
+
+        private static void UpdateCircles(object state)
+        {
+            var canvas = (Canvas)state;
+            var dispatcher = Application.Current.Dispatcher;
+
+            dispatcher.Invoke(() =>
+            {
+                lock (lockObject)
+                {
+                    foreach (var circleObject in circleList)
                     {
+                        Ellipse circle = (Ellipse)canvas.Children[circleList.IndexOf(circleObject)];
                         double left = Canvas.GetLeft(circle);
                         double top = Canvas.GetTop(circle);
 
@@ -137,36 +151,19 @@ namespace Logika
                                     circleObject.dirY -= -j * normalY / circleObject.Mass;
                                     otherCircle.dirX += -j * normalX / otherCircle.Mass;
                                     otherCircle.dirY += -j * normalY / otherCircle.Mass;
-
-                                    /*double maxSpeed = 8;
-                                    double speed1 = Math.Sqrt(circleObject.dirX * circleObject.dirX + circleObject.dirY * circleObject.dirY);
-                                    double speed2 = Math.Sqrt(otherCircle.dirX * otherCircle.dirX + otherCircle.dirY * otherCircle.dirY);
-                                    if (speed1 > maxSpeed)
-                                    {
-                                        circleObject.dirX *= maxSpeed / speed1;
-                                        circleObject.dirY *= maxSpeed / speed1;
-                                    }
-                                    if (speed2 > maxSpeed)
-                                    {
-                                        otherCircle.dirX *= maxSpeed / speed2;
-                                        otherCircle.dirY *= maxSpeed / speed2;
-                                    }*/
-
                                     break;
                                 }
                             }
                         }
-                    });
-
-                    await logger.LogAsync(circleObject.ToJson());
-                    await Task.Delay(1); // Zmieniony czas opóźnienia na 1 ms
+                        logger.LogAsync(circleObject.ToJson()).Wait();
+                    }
                 }
             });
-
-            task.Start();
-
         }
 
-        static void Main() { }
+        static void Main()
+        {
+
+        }
     }
 }
