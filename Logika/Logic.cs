@@ -13,12 +13,10 @@ namespace Logika
     public class Logic
     {
         public static CircleList circleList = new CircleList();
-        private static Logger logger = new Logger(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "diagnostic_log.txt"));
-        private static Timer timer;
-        private static object lockObject = new object();
-
+        private static Logger logger = new Logger();
         public static void CreateCircles(Canvas canvas, int value, int radius)
         {
+
             if (radius == 0)
             {
                 radius = 1;
@@ -35,10 +33,15 @@ namespace Logika
                 }
             }
 
+
             for (int i = 0; i < value; i++)
             {
                 CreateCircle(canvas, radius, radius);
             }
+            logger.CircleList = circleList;
+            Task timer = new Task(() => { logger.startLogger(1000); });
+            timer.Start();
+
         }
 
         public static void CreateCircle(Canvas canvas, int size, int radius)
@@ -76,25 +79,14 @@ namespace Logika
             canvas.Children.Add(circle);
 
             circleList.AddCircle(circleObject);
-
-            if (timer == null)
+            Task task = new Task(async () =>
             {
-                timer = new Timer(UpdateCircles, canvas, 0, 8); // Około 120 FPS
-            }
-        }
-
-        private static void UpdateCircles(object state)
-        {
-            var canvas = (Canvas)state;
-            var dispatcher = Application.Current.Dispatcher;
-
-            dispatcher.Invoke(() =>
-            {
-                lock (lockObject)
+                while (true)
                 {
-                    foreach (var circleObject in circleList)
+                    var dispatcher = Application.Current.Dispatcher;
+
+                    dispatcher.Invoke(() =>
                     {
-                        Ellipse circle = (Ellipse)canvas.Children[circleList.IndexOf(circleObject)];
                         double left = Canvas.GetLeft(circle);
                         double top = Canvas.GetTop(circle);
 
@@ -126,44 +118,49 @@ namespace Logika
                         {
                             if (otherCircle != circleObject)
                             {
-                                double dx = circleObject.X - otherCircle.X;
-                                double dy = circleObject.Y - otherCircle.Y;
-                                double distance = Math.Sqrt(dx * dx + dy * dy);
-
-                                if (distance < (circleObject.Radius + otherCircle.Radius))
+                                lock (otherCircle)
                                 {
-                                    double normalX = dx / distance;
-                                    double normalY = dy / distance;
-                                    double velocityX = circleObject.dirX - otherCircle.dirX;
-                                    double velocityY = circleObject.dirY - otherCircle.dirY;
-                                    double velocityAlongNormal = velocityX * normalX + velocityY * normalY;
+                                    double dx = circleObject.X - otherCircle.X;
+                                    double dy = circleObject.Y - otherCircle.Y;
+                                    double distance = Math.Sqrt(dx * dx + dy * dy);
 
-                                    if (velocityAlongNormal > 0)
+                                    if (distance < (circleObject.Radius + otherCircle.Radius))
                                     {
+                                        double normalX = dx / distance;
+                                        double normalY = dy / distance;
+                                        double velocityX = circleObject.dirX - otherCircle.dirX;
+                                        double velocityY = circleObject.dirY - otherCircle.dirY;
+                                        double velocityAlongNormal = velocityX * normalX + velocityY * normalY;
+
+                                        if (velocityAlongNormal > 0)
+                                        {
+                                            break;
+                                        }
+
+                                        double e = 1;
+                                        double j = -(1 + e) * velocityAlongNormal;
+                                        j /= (1 / circleObject.Mass + 1 / otherCircle.Mass);
+
+                                        circleObject.dirX -= -j * normalX / circleObject.Mass;
+                                        circleObject.dirY -= -j * normalY / circleObject.Mass;
+                                        otherCircle.dirX += -j * normalX / otherCircle.Mass;
+                                        otherCircle.dirY += -j * normalY / otherCircle.Mass;
+
                                         break;
                                     }
-
-                                    double e = 1;
-                                    double j = -(1 + e) * velocityAlongNormal;
-                                    j /= (1 / circleObject.Mass + 1 / otherCircle.Mass);
-
-                                    circleObject.dirX -= -j * normalX / circleObject.Mass;
-                                    circleObject.dirY -= -j * normalY / circleObject.Mass;
-                                    otherCircle.dirX += -j * normalX / otherCircle.Mass;
-                                    otherCircle.dirY += -j * normalY / otherCircle.Mass;
-                                    break;
                                 }
                             }
                         }
-                        logger.LogAsync(circleObject.ToJson()).Wait();
-                    }
+                    });
+
+                    Thread.Sleep(10);
                 }
             });
-        }
 
-        static void Main()
-        {
+            task.Start();
 
         }
+
+        static void Main() { }
     }
 }
