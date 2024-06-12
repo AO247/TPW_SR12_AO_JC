@@ -9,31 +9,28 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Timers;
 
-using Dane;
-
 namespace Logika
 {
     internal class Logger
     {
-        public static CircleList circleList = new CircleList();
-
+        private static List<CircleLogic> circles;
         private System.Timers.Timer timer;
         private bool enable = false;
         FileStream stream;
 
 
-        public CircleList CircleList
+        public List<CircleLogic> Circles
         {
-            get { return circleList; }
-            set { circleList = value; }
+            get { return circles; }
+            set { circles = value; }
         }
         public bool Enable
         {
             get => enable;
         }
-        public Logger(CircleList circleList)
+        public Logger(List<CircleLogic> circles)
         {
-            CircleList = circleList;
+            Circles = circles;
             startLogger(1000);
         }
         public Logger() { }
@@ -68,18 +65,17 @@ namespace Logika
             timer.Start();
         }
 
+       
 
-
-        public void DisplayTimeEvent(object source, ElapsedEventArgs e)
+        public  void DisplayTimeEvent(object source, ElapsedEventArgs e)
         {
-
+            
             // code here will run every second
-            foreach (Circle circle in circleList)
+            foreach (CircleLogic circleLogic in circles)
             {
-                JsonSerializer.SerializeAsync(stream, circle);
+                JsonSerializer.SerializeAsync(stream, circleLogic);
                 Console.WriteLine("Tak Logger sie wykonuje..");
             }
         }
     }
 }
-

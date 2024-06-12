@@ -4,5 +4,5 @@
 
 | Name Surname (initials) | GUID                                     |
 | ----------------------- | ---------------------------------------- |
-| AO                      | `{88b3a4a1-b3d7-4c3b-a818-32c728d95c05}` |
-| JC                      | `{d73f9477-b426-4c6d-b1b5-3883f2a00a33}` |
+| Krystian Romkowski      | `{5F228655-C306-46DC-8736-611519E3A359}` |
+| Jakub Szymczak          | `{E8AD2F88-83D5-411A-ADDD-6430A184DE6A}` | 

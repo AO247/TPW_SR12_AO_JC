@@ -1,166 +1,148 @@
-﻿using System;
-using System.IO;
+﻿using Dane;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Shapes;
-using Dane;
 
 namespace Logika
 {
-    public class Logic
+    public abstract class Logic
     {
-        public static CircleList circleList = new CircleList();
-        private static Logger logger = new Logger();
-        public static void CreateCircles(Canvas canvas, int value, int radius)
+        public static Logic CreateAPI()
         {
-
-            if (radius == 0)
-            {
-                radius = 1;
+            return new LogicAPI(Data.CreateAPI());
+        }
+        public abstract void createPlane(int width, int height, int numberOfCircles, int radius);
+        public abstract List<CircleLogic> GetCircleLogics();
+        
+        
+    }
+    public class LogicAPI : Logic
+    {
+        private Data dataAPI;
+        private List<CircleLogic> CircleLogics = new List<CircleLogic>();
+        bool enabled = false;
+        private Logger logger=new Logger();
+        public LogicAPI(Data abstractDataAPI = null)
+        {
+            this.dataAPI = Data.CreateAPI();
+        }
+        public List<CircleLogic> circleLogics
+        {
+            get { return CircleLogics; }
+            set { CircleLogics = value;
             }
-            else
-            {
-                if (radius < 0)
-                {
-                    radius -= radius * 2;
-                }
-                if (radius > 60)
-                {
-                    radius = 60;
-                }
-            }
+        }
 
-
-            for (int i = 0; i < value; i++)
+        public bool Enabled { get => enabled; set => enabled = value; }
+        public override void createPlane(int width, int height, int numberOfCircles, int radius)
+        {
+            circleLogics.Clear();
+            dataAPI.CreatePlane(width, height, numberOfCircles, radius);
+            foreach (Dane.Circle circle in dataAPI.GetCircles())
             {
-                CreateCircle(canvas, radius, radius);
+                this.CircleLogics.Add(new CircleLogic(circle));
             }
-            logger.CircleList = circleList;
-            Task timer = new Task(() => { logger.startLogger(1000); });
+            this.enabled = true;
+            this.logger.Circles = CircleLogics;
+            Task timer = new Task(()=> { this.logger.startLogger(1000); });
             timer.Start();
-
-        }
-
-        public static void CreateCircle(Canvas canvas, int size, int radius)
-        {
-            Random r = new Random(Guid.NewGuid().GetHashCode());
-
-            int x = r.Next(80, (int)canvas.Width - 20);
-            int y = r.Next(80, (int)canvas.Height - 20);
-            double speed = 0;
-
-            while (speed < 60)
+            foreach (CircleLogic circleLogic in this.CircleLogics)
             {
-                Random random = new Random();
-                speed = random.NextDouble() * 80; // Zmienione, aby zawsze zwracać różną wartość
-            }
-
-            if (radius < 10)
-            {
-                radius = 10;
-            }
-
-            Circle circleObject = new Circle(x, y, size, radius, speed, radius);
-            Random randomc = new Random();
-            Color color = Color.FromRgb((byte)randomc.Next(256), (byte)randomc.Next(256), (byte)randomc.Next(256));
-            Ellipse circle = new Ellipse
-            {
-                Width = radius * 2,
-                Height = radius * 2,
-                Fill = new SolidColorBrush(color)
-            };
-
-            Canvas.SetLeft(circle, x - radius);
-            Canvas.SetTop(circle, y - radius);
-
-            canvas.Children.Add(circle);
-
-            circleList.AddCircle(circleObject);
-            Task task = new Task(async () =>
-            {
-                while (true)
+                circleLogic.randomizeSpeed();
+                Task task = new Task(() =>
                 {
-                    var dispatcher = Application.Current.Dispatcher;
-
-                    dispatcher.Invoke(() =>
+                    int counter = 10;
+                    while (enabled)
                     {
-                        double left = Canvas.GetLeft(circle);
-                        double top = Canvas.GetTop(circle);
-
-                        if (left + circle.Width >= canvas.Width)
+                        if (counter <= 0)
                         {
-                            circleObject.dirX = -circleObject.dirX;
-                        }
-                        else if (left <= 0)
-                        {
-                            circleObject.dirX = -circleObject.dirX;
+                            checkCollisionsWithCircles(circleLogic, counter);
                         }
 
-                        if (top + circle.Height >= canvas.Height)
+                        if (circleLogic.X + circleLogic.Xspeed >= (width - circleLogic.Radius))
                         {
-                            circleObject.dirY = -circleObject.dirY;
-                        }
-                        else if (top <= 0)
-                        {
-                            circleObject.dirY = -circleObject.dirY;
+                            circleLogic.Xspeed *= -1;
                         }
 
-                        circleObject.X += circleObject.dirX;
-                        circleObject.Y += circleObject.dirY;
+                        if (circleLogic.Y + circleLogic.Y >= (height - circleLogic.Radius) * 2)
 
-                        Canvas.SetLeft(circle, circleObject.X - circleObject.Radius);
-                        Canvas.SetTop(circle, circleObject.Y - circleObject.Radius);
-
-                        foreach (var otherCircle in circleList)
                         {
-                            if (otherCircle != circleObject)
-                            {
-                                lock (otherCircle)
-                                {
-                                    double dx = circleObject.X - otherCircle.X;
-                                    double dy = circleObject.Y - otherCircle.Y;
-                                    double distance = Math.Sqrt(dx * dx + dy * dy);
-
-                                    if (distance < (circleObject.Radius + otherCircle.Radius))
-                                    {
-                                        double normalX = dx / distance;
-                                        double normalY = dy / distance;
-                                        double velocityX = circleObject.dirX - otherCircle.dirX;
-                                        double velocityY = circleObject.dirY - otherCircle.dirY;
-                                        double velocityAlongNormal = velocityX * normalX + velocityY * normalY;
-
-                                        if (velocityAlongNormal > 0)
-                                        {
-                                            break;
-                                        }
-
-                                        double e = 1;
-                                        double j = -(1 + e) * velocityAlongNormal;
-                                        j /= (1 / circleObject.Mass + 1 / otherCircle.Mass);
-
-                                        circleObject.dirX -= -j * normalX / circleObject.Mass;
-                                        circleObject.dirY -= -j * normalY / circleObject.Mass;
-                                        otherCircle.dirX += -j * normalX / otherCircle.Mass;
-                                        otherCircle.dirY += -j * normalY / otherCircle.Mass;
-
-                                        break;
-                                    }
-                                }
-                            }
+                            circleLogic.Yspeed *= -1;
                         }
-                    });
-
-                    Thread.Sleep(10);
-                }
-            });
-
-            task.Start();
-
+                        if (circleLogic.X + circleLogic.Xspeed <= 0)
+                        {
+                            circleLogic.Xspeed *= -1;
+                        }
+                        if (circleLogic.Y + circleLogic.Yspeed <= 0)
+                        {
+                            circleLogic.Yspeed *= -1;
+                        }
+                        circleLogic.X += circleLogic.Xspeed;
+                        circleLogic.Y += circleLogic.Yspeed;
+                        counter--;
+                        Thread.Sleep(10);
+                    }
+                });
+                task.Start();
+            }
         }
 
-        static void Main() { }
+        void checkCollisionsWithCircles(CircleLogic circle, int counter)
+        {
+            foreach (CircleLogic secondCircle in this.CircleLogics)
+            {
+                if (circle.Equals(secondCircle))
+                {
+                    continue;
+                }
+
+                    if (CalculateDistance(circle, secondCircle) < (circle.Radius / 2 + secondCircle.Radius / 2))
+                    {
+                    lock (secondCircle)
+                    {
+                        //tu sprawdzamy czy kulki już sie nie odbiły
+                        int relativeX = secondCircle.Xspeed - circle.Xspeed;
+                        int relativeY = secondCircle.Yspeed - circle.Yspeed;
+                        int relativeProduct = (secondCircle.X - circle.X) * relativeX + (secondCircle.Y - circle.Y) * relativeY;
+                        if (relativeProduct > 0)
+                        {
+                            continue;
+                        }
+                        //wyliczamy nowy kierunek i wartość prędkości
+                        int firstSpeedX = circle.Xspeed;
+                        int firstSpeedY = circle.Yspeed;
+                        int secondSpeedX = secondCircle.Xspeed;
+                        int secondSpeedY = secondCircle.Yspeed;
+
+                        circle.Xspeed = ((circle.Weight - secondCircle.Weight) / (circle.Weight + secondCircle.Weight)) * firstSpeedX
+                            + (2 * secondCircle.Weight) / (circle.Weight + secondCircle.Weight) * secondSpeedX;
+                        circle.Yspeed = ((circle.Weight - secondCircle.Weight) / (circle.Weight + secondCircle.Weight)) * firstSpeedY
+                            + (2 * secondCircle.Weight) / (circle.Weight + secondCircle.Weight) * secondSpeedY;
+                        secondCircle.Xspeed = ((2 * secondCircle.Weight) / (circle.Weight + secondCircle.Weight)) * firstSpeedX
+                            + ((circle.Weight - secondCircle.Weight) / (circle.Weight + secondCircle.Weight)) * secondSpeedX;
+                        secondCircle.Yspeed = ((2 * secondCircle.Weight) / (circle.Weight + secondCircle.Weight)) * firstSpeedY
+                            + ((circle.Weight - secondCircle.Weight) / (circle.Weight + secondCircle.Weight)) * secondSpeedY;
+
+
+
+                    }
+                }
+            }
+        }
+
+        private double CalculateDistance(CircleLogic first, CircleLogic second)
+        {
+            return Math.Sqrt(Math.Pow(first.X - second.X, 2) + Math.Pow(first.Y - second.Y, 2));
+        }
+
+
+        public override List<CircleLogic> GetCircleLogics()
+        {
+            return this.CircleLogics;
+        }
     }
 }
